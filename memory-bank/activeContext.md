@@ -2,8 +2,8 @@
 
 ## Current Focus
 
-**Phase**: Core Features - Data Integration
-**Status**: Video playback complete, ready for Supabase data fetching
+**Phase**: Core Features - Supabase Video Integration
+**Status**: Video playback fixed, monetization documented, ready for data integration
 **Date**: January 17, 2026
 
 ---
@@ -11,7 +11,7 @@
 ## What We've Completed
 
 ### Project Setup ✅
-- Created Expo Router project using official template (`npx create-expo-app@latest --template tabs`)
+- Created Expo Router project using official template
 - Fixed configuration issues (Colors.ts case sensitivity, babel config)
 - 5-tab navigation structure working
 
@@ -35,50 +35,47 @@
 4. **Authentication Context** - `contexts/AuthContext.tsx` with session management
 5. **Auth Screens** - Sign In / Sign Up screens with BizVibe styling
 
-### Authentication System ✅ (Tested & Working)
+### Authentication System ✅
 - Sign Up works (creates user + profile)
 - Sign In works
 - Sign Out works
 - Profile displays user info when logged in
 - Email confirmation disabled for dev
 
-### Video Playback ✅ (Just Completed)
-- **expo-av installed** - Video player package for React Native
+### Video Playback ✅ (Bug Fixes Applied)
 - **VideoPlayer component** (`components/VideoPlayer.tsx`)
-  - Full-screen vertical video playback
   - Play/pause on tap with visual feedback
-  - Mute toggle button (top right)
+  - Mute button working (moved outside parent Pressable)
   - Loading indicator with BizVibe coral spinner
   - Auto-play when video enters view
-  - Auto-pause and reset when scrolling away
-  - Looping video playback
-- **Feed Screen Updated** (`app/(tabs)/index.tsx`)
-  - FlatList with pagingEnabled for TikTok-style snap scrolling
-  - viewabilityConfig to detect which video is active (50% threshold)
-  - Performance optimizations: removeClippedSubviews, windowSize=3, maxToRenderPerBatch=2
-  - 5 sample videos from Google's video bucket for testing
-- **Video Overlay UI**
-  - Header with BizVibe logo and For You/Following tabs
-  - Business info: avatar, name, handle, distance, caption
-  - Action bar: like count, comment count, save, share
-  - Follow badge (+) on business avatar
-  - Text shadows for readability over video
-- **Dark Tab Bar** - Feed screen has dark themed navigation bar
+  - Auto-pause when scrolling away or switching tabs
+  - ResizeMode.CONTAIN for proper aspect ratio
+- **Feed Screen** (`app/(tabs)/index.tsx`)
+  - Correct height calculation (accounts for tab bar)
+  - useFocusEffect for tab focus tracking
+  - Fixed overlay positioning
+
+### Monetization Strategy ✅ (New)
+- Created `docs/06-monetization/` folder
+- **Pricing Tiers**: Free/Starter/Pro/Enterprise with video limits
+- **Revenue Strategy**: 5 revenue streams documented
+- Database schema requirements noted for implementation
 
 ---
 
 ## What's Next
 
-### Immediate Priority: Supabase Data Integration
-1. **Fetch videos from Supabase** - Replace sample data with real database
-2. **Add seed videos to database** - Upload test videos to Supabase Storage
-3. **Implement infinite scroll** - Pagination with cursor-based loading
+### Immediate Priority: Supabase Video Integration
+1. **Set up Supabase Storage bucket** - Create "videos" bucket
+2. **Create videos service** (`lib/videos.ts`) - Data fetching layer
+3. **Seed database with sample videos** - Use existing sample URLs
+4. **Update Feed to use Supabase data** - Replace hardcoded SAMPLE_VIDEOS
 
 ### Near-term Tasks
-- Business profile pages (tap on business to view)
+- Infinite scroll with pagination
 - Video upload functionality (Create screen)
+- Business profile pages
 - Like/Save interactions (connect to database)
-- Category filtering on Discover
 
 ---
 
@@ -88,20 +85,18 @@
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Video Player | expo-av | Official Expo package, well-supported |
-| Feed Scroll | FlatList + pagingEnabled | Native performance, snap-to-screen behavior |
-| Sample Videos | Google sample bucket | Free, reliable, various durations |
-| Active Video Detection | viewabilityConfig 50% | Standard threshold for auto-play |
+| Video Hosting (MVP) | Supabase Storage | Free, integrated, sufficient for testing |
+| Video Hosting (Prod) | Mux | Adaptive streaming, CDN, professional |
+| Monetization Model | Tiered subscriptions | Video limits drive upgrades |
+| Free Tier Limit | 3 videos/month, 15 sec | Low enough to drive upgrades |
 
 ### Previous Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Expo Go Mode | Tunnel (`--tunnel`) | Local network/firewall blocks LAN mode |
-| Email Confirmation | Disabled | Faster testing during development |
-| Backend | Supabase | PostgreSQL, Auth, Realtime, Storage all-in-one |
-| Auth Pattern | Context + useAuth hook | Clean, React-native-friendly state management |
-| Icon Library | Lucide React Native | Clean, professional, tree-shakeable |
+| Video Player | expo-av | Official Expo package |
+| ResizeMode | CONTAIN (dev), COVER (prod) | Sample videos are horizontal |
+| Tab Focus | useFocusEffect | Pause video when leaving tab |
 
 ---
 
@@ -112,7 +107,6 @@
 app/
 ├── _layout.tsx           # Root layout with AuthProvider
 ├── (auth)/
-│   ├── _layout.tsx       # Auth stack navigator
 │   ├── sign-in.tsx       # Sign in screen
 │   └── sign-up.tsx       # Sign up screen
 ├── (tabs)/
@@ -123,13 +117,18 @@ app/
 │   ├── inbox.tsx         # Messages
 │   └── profile.tsx       # User profile (auth-aware)
 components/
-├── VideoPlayer.tsx       # Full-screen video player component (NEW)
+├── VideoPlayer.tsx       # Full-screen video player component
 constants/
 ├── Colors.ts             # BizVibe color palette + themes
 contexts/
 ├── AuthContext.tsx       # Authentication state management
 lib/
 ├── supabase.ts           # Supabase client (lazy initialization)
+├── videos.ts             # Video data service (TO CREATE)
+docs/
+├── 06-monetization/      # NEW: Monetization documentation
+│   ├── pricing-tiers.md
+│   └── revenue-strategy.md
 ```
 
 ### Key Commands
@@ -141,51 +140,41 @@ npx expo start --tunnel
 npx expo start --tunnel --clear
 ```
 
-### Video Feed Data Structure
-```typescript
-interface VideoItem {
-  id: string;
-  uri: string;
-  business: {
-    name: string;
-    handle: string;
-    avatar: string;
-    distance: string;
-  };
-  caption: string;
-  stats: {
-    likes: number;
-    comments: number;
-  };
-}
-```
-
 ### Database Tables (Active)
 - `profiles` - User profiles (auto-created on signup)
-- `businesses` - Business accounts
-- `videos` - Video content (needs real data)
+- `businesses` - Business accounts (needs subscription fields)
+- `videos` - Video content (needs sample data)
 - `categories` - Content categories (seeded)
-- Others ready for future features
 
 ---
 
 ## Active Blockers
 
-None - ready to proceed with Supabase data integration.
+None - ready to proceed with Supabase video integration.
+
+---
+
+## Bug Fixes Applied This Session
+
+| Issue | Fix |
+|-------|-----|
+| Navbar overlapping content | videoHeight = SCREEN_HEIGHT - TAB_BAR_HEIGHT |
+| Video pausing on tab return | Added useFocusEffect, isTabFocused state |
+| Mute button not working | Moved button outside parent Pressable |
+| Video aspect ratio zoomed | Changed to ResizeMode.CONTAIN |
 
 ---
 
 ## Learnings & Insights
 
-1. **Tunnel Mode Required**: Local network/firewall blocks Expo Go LAN mode - always use `--tunnel`
-2. **User vs Profile**: Supabase stores auth users in `auth.users` table, profiles is separate
-3. **Email Confirmation**: Disabled for dev, enable for production
-4. **Lazy Supabase Init**: Prevents SSR issues in web builds
-5. **Route Type Casting**: Use `as any` for Expo Router strict typing workaround
-6. **Video Feed Performance**: Use windowSize, removeClippedSubviews, getItemLayout for smooth scrolling
-7. **viewabilityConfig**: Set itemVisiblePercentThreshold to control auto-play trigger
+1. **Tunnel Mode Required**: Local network blocks Expo Go LAN mode
+2. **Event Bubbling**: Nested Pressables cause tap conflicts - use separate containers
+3. **Tab Bar Height**: Hardcoded 85px works, but could use useBottomTabBarHeight hook
+4. **useFocusEffect**: From @react-navigation/native, available in Expo Router
+5. **ResizeMode.CONTAIN**: Better for non-vertical videos, COVER for production
+6. **Video Monetization**: Limiting uploads is key driver for subscription upgrades
 
 ---
 
 *Last Updated: January 17, 2026*
-*Session: Video Playback Complete, Ready for Data Integration*
+*Session: Video Fixes + Monetization Docs Complete, Ready for Supabase Integration*

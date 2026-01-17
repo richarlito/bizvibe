@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Bookmark, Heart, MessageCircle, Plus, Share2 } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import {
@@ -15,8 +16,9 @@ import VideoPlayer from '@/components/VideoPlayer';
 import { colors } from '@/constants/Colors';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const TAB_BAR_HEIGHT = 85;
 
-// Sample video data for testing
+// Sample video data for testing - using vertical-friendly videos
 const SAMPLE_VIDEOS = [
   {
     id: '1',
@@ -121,7 +123,21 @@ function formatNumber(num: number): string {
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isTabFocused, setIsTabFocused] = useState(true);
   const flatListRef = useRef<FlatList>(null);
+
+  // Calculate the actual viewable height (full screen minus tab bar)
+  const videoHeight = SCREEN_HEIGHT - TAB_BAR_HEIGHT;
+
+  // Track when the Feed tab gains/loses focus
+  useFocusEffect(
+    useCallback(() => {
+      setIsTabFocused(true);
+      return () => {
+        setIsTabFocused(false);
+      };
+    }, [])
+  );
 
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0 && viewableItems[0].index !== null) {
@@ -134,12 +150,13 @@ export default function FeedScreen() {
   }).current;
 
   const renderItem = useCallback(({ item, index }: { item: VideoItem; index: number }) => {
-    const isActive = index === activeIndex;
+    // Video is only active if it's the current index AND the tab is focused
+    const isActive = index === activeIndex && isTabFocused;
 
     return (
-      <View style={styles.videoItem}>
+      <View style={[styles.videoItem, { height: videoHeight }]}>
         {/* Video Player */}
-        <VideoPlayer uri={item.uri} isActive={isActive} />
+        <VideoPlayer uri={item.uri} isActive={isActive} videoHeight={videoHeight} />
 
         {/* Header Overlay */}
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -154,8 +171,8 @@ export default function FeedScreen() {
           </View>
         </View>
 
-        {/* Action Bar */}
-        <View style={[styles.actionBar, { bottom: insets.bottom + 120 }]}>
+        {/* Action Bar - positioned above the tab bar */}
+        <View style={styles.actionBar}>
           <Pressable style={styles.actionItem}>
             <View style={styles.actionIcon}>
               <Heart size={28} color={colors.white} />
@@ -182,8 +199,8 @@ export default function FeedScreen() {
           </Pressable>
         </View>
 
-        {/* Business Info */}
-        <View style={[styles.businessInfo, { bottom: insets.bottom + 20 }]}>
+        {/* Business Info - positioned above the tab bar */}
+        <View style={styles.businessInfo}>
           <Pressable style={styles.avatarContainer}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{item.business.avatar}</Text>
@@ -204,13 +221,13 @@ export default function FeedScreen() {
         </View>
       </View>
     );
-  }, [activeIndex, insets]);
+  }, [activeIndex, isTabFocused, insets, videoHeight]);
 
   const getItemLayout = useCallback((_: any, index: number) => ({
-    length: SCREEN_HEIGHT,
-    offset: SCREEN_HEIGHT * index,
+    length: videoHeight,
+    offset: videoHeight * index,
     index,
-  }), []);
+  }), [videoHeight]);
 
   return (
     <View style={styles.container}>
@@ -221,7 +238,7 @@ export default function FeedScreen() {
         keyExtractor={(item) => item.id}
         pagingEnabled
         showsVerticalScrollIndicator={false}
-        snapToInterval={SCREEN_HEIGHT}
+        snapToInterval={videoHeight}
         snapToAlignment="start"
         decelerationRate="fast"
         onViewableItemsChanged={onViewableItemsChanged}
@@ -243,7 +260,6 @@ const styles = StyleSheet.create({
   },
   videoItem: {
     width: '100%',
-    height: SCREEN_HEIGHT,
     position: 'relative',
   },
   header: {
@@ -288,6 +304,7 @@ const styles = StyleSheet.create({
   actionBar: {
     position: 'absolute',
     right: 12,
+    bottom: 100,
     alignItems: 'center',
     gap: 20,
     zIndex: 10,
@@ -314,6 +331,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 80,
+    bottom: 16,
     flexDirection: 'row',
     gap: 12,
     zIndex: 10,

@@ -2,31 +2,32 @@ import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av';
 import { Pause, Play, Volume2, VolumeX } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Pressable,
-    StyleSheet,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  View,
 } from 'react-native';
 
 import { colors } from '@/constants/Colors';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface VideoPlayerProps {
   uri: string;
   isActive: boolean;
+  videoHeight: number;
   onVideoEnd?: () => void;
 }
 
-export default function VideoPlayer({ uri, isActive, onVideoEnd }: VideoPlayerProps) {
+export default function VideoPlayer({ uri, isActive, videoHeight, onVideoEnd }: VideoPlayerProps) {
   const videoRef = useRef<Video>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showControls, setShowControls] = useState(false);
 
-  // Handle active state changes (when video comes into view or leaves)
+  // Handle active state changes (when video comes into view or leaves, or tab loses focus)
   useEffect(() => {
     if (isActive) {
       videoRef.current?.playAsync();
@@ -72,56 +73,66 @@ export default function VideoPlayer({ uri, isActive, onVideoEnd }: VideoPlayerPr
   }, [isMuted]);
 
   return (
-    <Pressable style={styles.container} onPress={togglePlayPause}>
-      <Video
-        ref={videoRef}
-        source={{ uri }}
-        style={styles.video}
-        resizeMode={ResizeMode.COVER}
-        isLooping
-        isMuted={isMuted}
-        shouldPlay={isActive}
-        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-        useNativeControls={false}
-      />
+    <View style={[styles.container, { height: videoHeight }]}>
+      {/* Main video area - tappable for play/pause */}
+      <Pressable style={styles.videoTouchable} onPress={togglePlayPause}>
+        <Video
+          ref={videoRef}
+          source={{ uri }}
+          style={styles.video}
+          resizeMode={ResizeMode.CONTAIN}
+          isLooping
+          isMuted={isMuted}
+          shouldPlay={isActive}
+          onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+          useNativeControls={false}
+        />
 
-      {/* Loading Indicator */}
-      {isLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary[500]} />
-        </View>
-      )}
-
-      {/* Play/Pause Overlay */}
-      {showControls && !isLoading && (
-        <View style={styles.controlsOverlay}>
-          <View style={styles.playPauseButton}>
-            {isPlaying ? (
-              <Pause size={50} color={colors.white} fill={colors.white} />
-            ) : (
-              <Play size={50} color={colors.white} fill={colors.white} />
-            )}
+        {/* Loading Indicator */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary[500]} />
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Mute Button */}
-      <Pressable style={styles.muteButton} onPress={toggleMute}>
+        {/* Play/Pause Overlay */}
+        {showControls && !isLoading && (
+          <View style={styles.controlsOverlay}>
+            <View style={styles.playPauseButton}>
+              {isPlaying ? (
+                <Pause size={50} color={colors.white} fill={colors.white} />
+              ) : (
+                <Play size={50} color={colors.white} fill={colors.white} />
+              )}
+            </View>
+          </View>
+        )}
+      </Pressable>
+
+      {/* Mute Button - Outside the main Pressable to prevent event bubbling */}
+      <Pressable 
+        style={styles.muteButton} 
+        onPress={toggleMute}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
         {isMuted ? (
           <VolumeX size={22} color={colors.white} />
         ) : (
           <Volume2 size={22} color={colors.white} />
         )}
       </Pressable>
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
     backgroundColor: colors.black,
+    position: 'relative',
+  },
+  videoTouchable: {
+    flex: 1,
   },
   video: {
     width: '100%',
@@ -158,5 +169,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 20,
   },
 });
