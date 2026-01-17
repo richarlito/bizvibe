@@ -42,7 +42,7 @@ export default function TabLayout() {
             paddingBottom: 25,
             height: 85,
           },
-          tabBarActiveTintColor: colors.white,
+          tabBarActiveTintColor: colors.primary[500],
           tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.5)',
         }}
       />

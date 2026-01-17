@@ -9,7 +9,7 @@ import {
   StyleSheet,
   Text,
   View,
-  ViewToken,
+  ViewToken
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -122,28 +122,38 @@ export default function FeedScreen() {
     }
   }, []);
 
-  // Load more videos (infinite scroll)
+  // Load more videos (infinite scroll with looping)
   const loadMoreVideos = useCallback(async () => {
-    if (isLoadingMore || !hasMoreVideos || videos.length === 0) return;
-    
-    // Don't load more if we're using fallback videos
-    if (videos[0]?.id.startsWith('fallback')) return;
+    if (isLoadingMore || videos.length === 0) return;
 
-    try {
-      setIsLoadingMore(true);
-      const newVideos = await getVideosForFeed(VIDEOS_PER_PAGE, currentOffset.current);
-      
-      if (newVideos.length > 0) {
-        setVideos(prev => [...prev, ...newVideos]);
-        currentOffset.current += VIDEOS_PER_PAGE;
-        setHasMoreVideos(newVideos.length === VIDEOS_PER_PAGE);
-      } else {
-        setHasMoreVideos(false);
+    // If we have more videos to fetch from the database
+    if (hasMoreVideos && !videos[0]?.id.startsWith('fallback')) {
+      try {
+        setIsLoadingMore(true);
+        const newVideos = await getVideosForFeed(VIDEOS_PER_PAGE, currentOffset.current);
+        
+        if (newVideos.length > 0) {
+          setVideos(prev => [...prev, ...newVideos]);
+          currentOffset.current += VIDEOS_PER_PAGE;
+          setHasMoreVideos(newVideos.length === VIDEOS_PER_PAGE);
+        } else {
+          setHasMoreVideos(false);
+        }
+      } catch (err) {
+        console.error('Error loading more videos:', err);
+      } finally {
+        setIsLoadingMore(false);
       }
-    } catch (err) {
-      console.error('Error loading more videos:', err);
-    } finally {
-      setIsLoadingMore(false);
+    } else {
+      // Loop: Duplicate existing videos with unique keys for infinite scroll
+      const loopId = Date.now();
+      setVideos(prev => [
+        ...prev,
+        ...prev.slice(0, Math.min(prev.length, VIDEOS_PER_PAGE)).map((v, i) => ({
+          ...v,
+          id: `${v.id.split('-loop-')[0]}-loop-${loopId}-${i}`
+        }))
+      ]);
     }
   }, [isLoadingMore, hasMoreVideos, videos]);
 
@@ -175,6 +185,17 @@ export default function FeedScreen() {
   const handleRefresh = useCallback(() => {
     fetchVideos(true);
   }, [fetchVideos]);
+
+  // Footer component for loading more indicator - MUST be before any early returns
+  const renderFooter = useCallback(() => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.loadingMore}>
+        <ActivityIndicator size="small" color={colors.primary[500]} />
+        <Text style={styles.loadingMoreText}>Loading more...</Text>
+      </View>
+    );
+  }, [isLoadingMore]);
 
   const renderItem = useCallback(({ item, index }: { item: FeedVideo; index: number }) => {
     // Video is only active if it's the current index AND the tab is focused
@@ -279,17 +300,6 @@ export default function FeedScreen() {
     );
   }
 
-  // Footer component for loading more indicator
-  const renderFooter = useCallback(() => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={colors.primary[500]} />
-        <Text style={styles.loadingMoreText}>Loading more...</Text>
-      </View>
-    );
-  }, [isLoadingMore]);
-
   return (
     <View style={styles.container}>
       <FlatList
@@ -314,7 +324,14 @@ export default function FeedScreen() {
         onEndReached={loadMoreVideos}
         onEndReachedThreshold={0.5}
         ListFooterComponent={renderFooter}
+        progressViewOffset={50}
       />
+      {/* Pull-to-refresh indicator overlay */}
+      {isRefreshing && (
+        <View style={styles.refreshIndicator}>
+          <ActivityIndicator size="large" color={colors.primary[500]} />
+        </View>
+      )}
     </View>
   );
 }
@@ -502,5 +519,13 @@ const styles = StyleSheet.create({
   loadingMoreText: {
     color: colors.white,
     fontSize: 14,
+  },
+  refreshIndicator: {
+    position: 'absolute',
+    top: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 20,
   },
 });
