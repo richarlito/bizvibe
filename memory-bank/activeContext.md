@@ -2,80 +2,49 @@
 
 ## Current Focus
 
-**Phase**: Core Features - Supabase Video Integration
-**Status**: Video playback fixed, monetization documented, ready for data integration
+**Phase**: Core Features - Video Upload
+**Status**: Feed complete with Supabase data + infinite scroll, ready for video upload
 **Date**: January 17, 2026
 
 ---
 
-## What We've Completed
+## What We've Completed This Session
 
-### Project Setup ✅
-- Created Expo Router project using official template
-- Fixed configuration issues (Colors.ts case sensitivity, babel config)
-- 5-tab navigation structure working
+### Supabase Video Integration ✅
+1. **Supabase Storage bucket** - "videos" bucket created (50MB limit)
+2. **video_url column** - Added to videos table
+3. **Videos service** (`lib/videos.ts`) - Data fetching layer
+4. **Seed SQL script** - Sample businesses and videos
+5. **Feed connected to Supabase** - Real data with fallback
 
-### Design System Implementation ✅
-- **Colors**: Full BizVibe palette (Primary Coral #FF6B42, Secondary Blue #5C6CFF)
-- **Icons**: Lucide React Native (professional vector icons)
-- **Typography**: Consistent sizing and weights
-- **Dark/Light Mode**: Full theme support
+### Feed UX Improvements ✅
+1. **React Hooks error fixed** - Moved renderFooter before early returns
+2. **Feed tab icon color** - Changed white → coral primary
+3. **Infinite loop scroll** - Videos cycle endlessly when reaching end
+4. **Pull-to-refresh visible** - Added coral spinner overlay
 
-### Screen UI Complete ✅
-1. **Feed** - TikTok-style video feed with working video player
-2. **Discover** - Search bar + 6 category cards + location
-3. **Create** - Video record CTA + upload + AI edit options
-4. **Inbox** - Message tabs + conversation list
-5. **Profile** - Auth-aware (shows sign-in card or user profile)
-
-### Backend Infrastructure ✅
-1. **Supabase Project** - Connected to `bqorxeqbpchkeesuduwk.supabase.co`
-2. **Environment Variables** - `.env` configured with Supabase credentials
-3. **Database Migration** - Executed in Supabase SQL Editor
-4. **Authentication Context** - `contexts/AuthContext.tsx` with session management
-5. **Auth Screens** - Sign In / Sign Up screens with BizVibe styling
-
-### Authentication System ✅
-- Sign Up works (creates user + profile)
-- Sign In works
-- Sign Out works
-- Profile displays user info when logged in
-- Email confirmation disabled for dev
-
-### Video Playback ✅ (Bug Fixes Applied)
-- **VideoPlayer component** (`components/VideoPlayer.tsx`)
-  - Play/pause on tap with visual feedback
-  - Mute button working (moved outside parent Pressable)
-  - Loading indicator with BizVibe coral spinner
-  - Auto-play when video enters view
-  - Auto-pause when scrolling away or switching tabs
-  - ResizeMode.CONTAIN for proper aspect ratio
-- **Feed Screen** (`app/(tabs)/index.tsx`)
-  - Correct height calculation (accounts for tab bar)
-  - useFocusEffect for tab focus tracking
-  - Fixed overlay positioning
-
-### Monetization Strategy ✅ (New)
-- Created `docs/06-monetization/` folder
-- **Pricing Tiers**: Free/Starter/Pro/Enterprise with video limits
-- **Revenue Strategy**: 5 revenue streams documented
-- Database schema requirements noted for implementation
+### Monetization Documentation ✅
+1. Created `docs/06-monetization/pricing-tiers.md`
+2. Created `docs/06-monetization/revenue-strategy.md`
+3. Business tiers: Free/Starter($19)/Pro($49)/Enterprise($149)
+4. Video limits as key monetization driver
 
 ---
 
 ## What's Next
 
-### Immediate Priority: Supabase Video Integration
-1. **Set up Supabase Storage bucket** - Create "videos" bucket
-2. **Create videos service** (`lib/videos.ts`) - Data fetching layer
-3. **Seed database with sample videos** - Use existing sample URLs
-4. **Update Feed to use Supabase data** - Replace hardcoded SAMPLE_VIDEOS
+### Immediate Priority: Video Upload (Create Screen)
+The Create screen has UI placeholders. Need to implement:
+1. **Camera/Gallery picker** - expo-image-picker
+2. **Video recording** - expo-camera
+3. **Upload to Supabase Storage** - Upload flow
+4. **Create video record** - Insert into videos table
+5. **Progress indicator** - Upload progress
 
 ### Near-term Tasks
-- Infinite scroll with pagination
-- Video upload functionality (Create screen)
-- Business profile pages
-- Like/Save interactions (connect to database)
+- Business profile pages (tap on business in feed)
+- Category filtering (Discover screen functional)
+- Like/Save interactions (wire up buttons)
 
 ---
 
@@ -85,18 +54,10 @@
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Video Hosting (MVP) | Supabase Storage | Free, integrated, sufficient for testing |
-| Video Hosting (Prod) | Mux | Adaptive streaming, CDN, professional |
-| Monetization Model | Tiered subscriptions | Video limits drive upgrades |
-| Free Tier Limit | 3 videos/month, 15 sec | Low enough to drive upgrades |
-
-### Previous Decisions
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Video Player | expo-av | Official Expo package |
-| ResizeMode | CONTAIN (dev), COVER (prod) | Sample videos are horizontal |
-| Tab Focus | useFocusEffect | Pause video when leaving tab |
+| Infinite scroll behavior | Loop videos | TikTok-style endless scrolling |
+| Refresh indicator | Overlay spinner | Native RefreshControl hidden on dark |
+| Git workflow | Ask before commit/push | User preference to verify first |
+| Video hosting (MVP) | Supabase Storage | Free tier, 50MB limit sufficient |
 
 ---
 
@@ -110,25 +71,22 @@ app/
 │   ├── sign-in.tsx       # Sign in screen
 │   └── sign-up.tsx       # Sign up screen
 ├── (tabs)/
-│   ├── _layout.tsx       # Tab navigator (dark bar for Feed)
-│   ├── index.tsx         # Feed screen with video player
+│   ├── _layout.tsx       # Tab navigator (coral active icon)
+│   ├── index.tsx         # Feed with Supabase data + infinite scroll
 │   ├── discover.tsx      # Search & categories
-│   ├── create.tsx        # Video creation
+│   ├── create.tsx        # Video creation (TO IMPLEMENT)
 │   ├── inbox.tsx         # Messages
-│   └── profile.tsx       # User profile (auth-aware)
+│   └── profile.tsx       # User profile
 components/
-├── VideoPlayer.tsx       # Full-screen video player component
-constants/
-├── Colors.ts             # BizVibe color palette + themes
-contexts/
-├── AuthContext.tsx       # Authentication state management
+├── VideoPlayer.tsx       # Full-screen video player
 lib/
-├── supabase.ts           # Supabase client (lazy initialization)
-├── videos.ts             # Video data service (TO CREATE)
+├── supabase.ts           # Supabase client
+├── videos.ts             # Video data service (NEW)
 docs/
-├── 06-monetization/      # NEW: Monetization documentation
-│   ├── pricing-tiers.md
-│   └── revenue-strategy.md
+├── 06-monetization/      # Monetization docs (NEW)
+supabase/
+├── seed/
+│   └── sample_videos.sql # Sample data script (NEW)
 ```
 
 ### Key Commands
@@ -141,16 +99,17 @@ npx expo start --tunnel --clear
 ```
 
 ### Database Tables (Active)
-- `profiles` - User profiles (auto-created on signup)
-- `businesses` - Business accounts (needs subscription fields)
-- `videos` - Video content (needs sample data)
-- `categories` - Content categories (seeded)
+- `profiles` - User profiles
+- `businesses` - Business accounts
+- `videos` - Video content (with video_url column)
+- `categories` - Content categories
+- `saves` - User saved videos (wishlist)
 
 ---
 
 ## Active Blockers
 
-None - ready to proceed with Supabase video integration.
+None - ready for video upload implementation.
 
 ---
 
@@ -158,23 +117,29 @@ None - ready to proceed with Supabase video integration.
 
 | Issue | Fix |
 |-------|-----|
-| Navbar overlapping content | videoHeight = SCREEN_HEIGHT - TAB_BAR_HEIGHT |
-| Video pausing on tab return | Added useFocusEffect, isTabFocused state |
-| Mute button not working | Moved button outside parent Pressable |
-| Video aspect ratio zoomed | Changed to ResizeMode.CONTAIN |
+| React Hooks order error | Moved renderFooter callback before early returns |
+| Feed tab icon white | Changed tabBarActiveTintColor to colors.primary[500] |
+| Infinite scroll not looping | Duplicate videos with unique keys when end reached |
+| Pull-to-refresh invisible | Added overlay with coral spinner |
 
 ---
 
 ## Learnings & Insights
 
-1. **Tunnel Mode Required**: Local network blocks Expo Go LAN mode
-2. **Event Bubbling**: Nested Pressables cause tap conflicts - use separate containers
-3. **Tab Bar Height**: Hardcoded 85px works, but could use useBottomTabBarHeight hook
-4. **useFocusEffect**: From @react-navigation/native, available in Expo Router
-5. **ResizeMode.CONTAIN**: Better for non-vertical videos, COVER for production
-6. **Video Monetization**: Limiting uploads is key driver for subscription upgrades
+1. **Hooks must be called consistently** - Can't have hooks after conditional returns
+2. **RefreshControl on dark backgrounds** - Native spinner may be invisible, use overlay
+3. **Infinite scroll looping** - Duplicate with unique IDs to allow same video multiple times
+4. **Ask before commit** - User prefers to verify changes work before pushing
+
+---
+
+## Git Commits This Session
+
+1. `e95696f` - Connect Feed to Supabase database
+2. `85f4094` - Add infinite scroll (had hooks error)
+3. `11ef4e7` - Fix Feed UX improvements (hooks, icon, scroll, refresh)
 
 ---
 
 *Last Updated: January 17, 2026*
-*Session: Video Fixes + Monetization Docs Complete, Ready for Supabase Integration*
+*Session: Supabase integration + Feed UX complete, ready for video upload*

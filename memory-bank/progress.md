@@ -34,6 +34,8 @@
 ### Backend Infrastructure ✅
 - [x] **Supabase Project Connected** (bqorxeqbpchkeesuduwk.supabase.co)
 - [x] **Database Schema Executed** - All 12 tables created
+- [x] **Supabase Storage** - "videos" bucket created (50MB limit, free tier)
+- [x] **video_url column** - Added to videos table for direct URLs
 - [x] **Authentication System** - AuthContext with useAuth hook
 - [x] **Auth Screens** - Sign In / Sign Up with BizVibe design
 
@@ -44,11 +46,11 @@
 - [x] Profile Display - Shows user info when logged in
 - [x] Email Confirmation - Disabled for development
 
-### Video Playback ✅ (IMPLEMENTED & FIXED)
+### Video Playback ✅ (FULLY IMPLEMENTED)
 - [x] **expo-av installed** - Video player package
 - [x] **VideoPlayer component** - Full-screen vertical video player
   - Play/pause on tap with visual feedback
-  - Mute toggle button (fixed - moved outside parent Pressable)
+  - Mute toggle button (moved outside parent Pressable)
   - Loading indicator with BizVibe coral spinner
   - Auto-play when video enters view
   - Auto-pause when scrolling away or switching tabs (useFocusEffect)
@@ -66,7 +68,23 @@
   - Follow badge on avatar
   - Text shadows for readability
   - Fixed positioning (no overlap with tab bar)
-- [x] **Dark Tab Bar** - Feed screen has dark themed tab bar
+- [x] **Dark Tab Bar** - Feed screen has dark themed tab bar with coral active icon
+
+### Video Data Service ✅ (NEW)
+- [x] **lib/videos.ts** - Video data service created
+  - `getVideosForFeed()` - Fetch videos with business data from Supabase
+  - `getVideoById()` - Single video lookup
+  - `toggleVideoSave()` - Save/unsave videos for wishlist
+  - `incrementVideoViews()` - Track video view counts
+  - FeedVideo type for consistent data structure
+- [x] **Feed connected to Supabase** - Real data fetching (with fallback videos)
+- [x] **Seed SQL script** - `supabase/seed/sample_videos.sql` for testing
+
+### Infinite Scroll ✅ (NEW)
+- [x] **Infinite loop scroll** - Videos cycle endlessly when reaching end
+- [x] **onEndReached** - Triggers loading more or looping
+- [x] **Loading indicator** - Shows when fetching more videos
+- [x] **Pull-to-refresh** - Visible coral spinner overlay
 
 ### Monetization Strategy ✅ (DOCUMENTED)
 - [x] **Business Subscription Tiers** documented
@@ -87,26 +105,26 @@
 - [x] Environment variables set up (`.env`)
 - [x] Lazy Supabase initialization (prevents SSR issues)
 - [x] Git repository connected (github.com/richarlito/bizvibe)
+- [x] Always ask before git commit/push (user preference)
 
 ---
 
 ## What's Left to Build 🚧
 
-### Phase 2: Core Features (IN PROGRESS)
+### Phase 2: Core Features (MOSTLY COMPLETE)
 - [x] Video playback integration (expo-av) ✅
-- [ ] **Set up Supabase Storage for videos** ← NEXT TASK
-- [ ] Create videos service for Supabase data fetching
-- [ ] Seed database with sample video data
-- [ ] Connect Feed to Supabase (replace hardcoded data)
-- [ ] Infinite scroll feed (pagination)
-- [ ] Video upload functionality
+- [x] Supabase Storage bucket for videos ✅
+- [x] Videos service for data fetching ✅
+- [x] Feed connected to Supabase ✅
+- [x] Infinite scroll with looping ✅
+- [ ] **Video upload functionality** ← NEXT TASK
 - [ ] Business profile pages
 - [ ] Category filtering
 - [ ] Location-based discovery
 
 ### Phase 3: User Features
 - [x] User authentication flow ✅
-- [ ] Wishlist/favorites system
+- [ ] Wishlist/favorites system (toggleVideoSave ready)
 - [ ] Messaging (real-time chat)
 - [ ] Reviews and ratings
 - [ ] Push notifications
@@ -131,17 +149,23 @@
 1. **TypeScript route typing** - Using `as any` cast for auth route navigation
 2. **Tunnel mode required** - Local network/firewall blocks LAN mode for Expo Go
 3. **Reload re-downloads bundle** - Tunnel mode is slower than LAN mode
-4. **Sample videos only** - Feed uses Google sample videos (horizontal, not ideal)
-5. **EXVideo warning** - "Invalid view returned from registry" - harmless warning during mount
+4. **Sample videos horizontal** - Google sample videos not vertical format (for testing only)
 
 ---
 
 ## Bug Fixes Applied (January 17, 2026)
 
+### Earlier Fixes
 1. **Navbar overlapping content** - Fixed by calculating videoHeight = SCREEN_HEIGHT - TAB_BAR_HEIGHT
 2. **Video pausing on tab switch** - Fixed with useFocusEffect tracking isTabFocused
 3. **Mute button not working** - Fixed by moving button outside main Pressable (event bubbling)
 4. **Video aspect ratio zoomed** - Fixed by using ResizeMode.CONTAIN instead of COVER
+
+### Latest Fixes
+5. **React Hooks order error** - Fixed by moving renderFooter callback before early returns
+6. **Feed tab icon white** - Fixed by changing tabBarActiveTintColor to colors.primary[500]
+7. **Infinite scroll not looping** - Fixed by duplicating videos with unique keys when end reached
+8. **Pull-to-refresh invisible** - Fixed by adding visible overlay with coral spinner
 
 ---
 
@@ -159,7 +183,7 @@ npx expo start --tunnel --clear
 
 ## Current Status
 
-**Phase**: Core Features - Supabase Video Integration  
+**Phase**: Core Features - Video Upload  
 **Last Updated**: January 17, 2026  
-**Last Completed**: Video playback bug fixes + Monetization documentation  
-**Next Task**: Set up Supabase Storage bucket and connect Feed to database
+**Last Completed**: Infinite scroll with looping, Supabase video integration  
+**Next Task**: Video upload functionality (Create screen)
