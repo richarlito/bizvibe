@@ -70,6 +70,8 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
+const VIDEOS_PER_PAGE = 10;
+
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const [videos, setVideos] = useState<FeedVideo[]>([]);
@@ -77,13 +79,16 @@ export default function FeedScreen() {
   const [isTabFocused, setIsTabFocused] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreVideos, setHasMoreVideos] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
+  const currentOffset = useRef(0);
 
   // Calculate the actual viewable height (full screen minus tab bar)
   const videoHeight = SCREEN_HEIGHT - TAB_BAR_HEIGHT;
 
-  // Fetch videos from Supabase
+  // Fetch videos from Supabase (initial load or refresh)
   const fetchVideos = useCallback(async (showRefreshIndicator = false) => {
     try {
       if (showRefreshIndicator) {
@@ -93,25 +98,54 @@ export default function FeedScreen() {
       }
       setError(null);
 
-      const fetchedVideos = await getVideosForFeed(10, 0);
+      const fetchedVideos = await getVideosForFeed(VIDEOS_PER_PAGE, 0);
+      currentOffset.current = VIDEOS_PER_PAGE;
       
       if (fetchedVideos.length > 0) {
         setVideos(fetchedVideos);
+        setHasMoreVideos(fetchedVideos.length === VIDEOS_PER_PAGE);
       } else {
         // Use fallback videos if database is empty
         console.log('No videos in database, using fallback videos');
         setVideos(FALLBACK_VIDEOS);
+        setHasMoreVideos(false);
       }
     } catch (err) {
       console.error('Error fetching videos:', err);
       setError('Failed to load videos');
       // Use fallback videos on error
       setVideos(FALLBACK_VIDEOS);
+      setHasMoreVideos(false);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }, []);
+
+  // Load more videos (infinite scroll)
+  const loadMoreVideos = useCallback(async () => {
+    if (isLoadingMore || !hasMoreVideos || videos.length === 0) return;
+    
+    // Don't load more if we're using fallback videos
+    if (videos[0]?.id.startsWith('fallback')) return;
+
+    try {
+      setIsLoadingMore(true);
+      const newVideos = await getVideosForFeed(VIDEOS_PER_PAGE, currentOffset.current);
+      
+      if (newVideos.length > 0) {
+        setVideos(prev => [...prev, ...newVideos]);
+        currentOffset.current += VIDEOS_PER_PAGE;
+        setHasMoreVideos(newVideos.length === VIDEOS_PER_PAGE);
+      } else {
+        setHasMoreVideos(false);
+      }
+    } catch (err) {
+      console.error('Error loading more videos:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMoreVideos, videos]);
 
   // Initial fetch
   useEffect(() => {
@@ -245,6 +279,17 @@ export default function FeedScreen() {
     );
   }
 
+  // Footer component for loading more indicator
+  const renderFooter = useCallback(() => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.loadingMore}>
+        <ActivityIndicator size="small" color={colors.primary[500]} />
+        <Text style={styles.loadingMoreText}>Loading more...</Text>
+      </View>
+    );
+  }, [isLoadingMore]);
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -266,6 +311,9 @@ export default function FeedScreen() {
         initialNumToRender={1}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
+        onEndReached={loadMoreVideos}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
       />
     </View>
   );
@@ -443,5 +491,16 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  loadingMore: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    gap: 8,
+  },
+  loadingMoreText: {
+    color: colors.white,
+    fontSize: 14,
   },
 });
