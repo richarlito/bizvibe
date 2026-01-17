@@ -1,7 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Bookmark, Heart, MessageCircle, Plus, Share2 } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
+import { Bookmark, Heart, MessageCircle, Plus, RefreshCw, Share2 } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Pressable,
@@ -14,104 +15,53 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import VideoPlayer from '@/components/VideoPlayer';
 import { colors } from '@/constants/Colors';
+import { FeedVideo, getVideosForFeed } from '@/lib/videos';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TAB_BAR_HEIGHT = 85;
 
-// Sample video data for testing - using vertical-friendly videos
-const SAMPLE_VIDEOS = [
+// Fallback sample videos (used when database is empty)
+const FALLBACK_VIDEOS: FeedVideo[] = [
   {
-    id: '1',
+    id: 'fallback-1',
     uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     business: {
+      id: '',
       name: 'Coffee Beans Cafe',
       handle: '@coffeebeans',
       avatar: 'CB',
       distance: '0.3mi',
     },
     caption: 'Fresh roasted beans every morning! ☕ Come try our new seasonal blend and get 20% off your first order.',
-    stats: {
-      likes: 2400,
-      comments: 148,
-    },
+    stats: { likes: 2400, comments: 148, saves: 0 },
   },
   {
-    id: '2',
+    id: 'fallback-2',
     uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     business: {
+      id: '',
       name: 'Urban Fitness Studio',
       handle: '@urbanfitness',
       avatar: 'UF',
       distance: '0.8mi',
     },
     caption: 'Transform your body in 30 days! 💪 New member special: First month FREE with annual membership.',
-    stats: {
-      likes: 5200,
-      comments: 320,
-    },
+    stats: { likes: 5200, comments: 320, saves: 0 },
   },
   {
-    id: '3',
+    id: 'fallback-3',
     uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
     business: {
+      id: '',
       name: 'Bella Italia Restaurant',
       handle: '@bellaitalia',
       avatar: 'BI',
       distance: '1.2mi',
     },
     caption: 'Authentic Italian cuisine made with love 🍝 Reserve your table for our special tasting menu this weekend!',
-    stats: {
-      likes: 3800,
-      comments: 215,
-    },
-  },
-  {
-    id: '4',
-    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-    business: {
-      name: 'Tech Repair Pro',
-      handle: '@techrepairpro',
-      avatar: 'TR',
-      distance: '0.5mi',
-    },
-    caption: 'Screen cracked? We fix it in 30 minutes or less! 📱 Same-day repairs for all phone models.',
-    stats: {
-      likes: 1800,
-      comments: 89,
-    },
-  },
-  {
-    id: '5',
-    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-    business: {
-      name: 'Zen Spa & Wellness',
-      handle: '@zenspa',
-      avatar: 'ZS',
-      distance: '1.5mi',
-    },
-    caption: 'Escape the stress of daily life 🧘‍♀️ Book a 90-minute massage and get a free facial treatment.',
-    stats: {
-      likes: 4100,
-      comments: 267,
-    },
+    stats: { likes: 3800, comments: 215, saves: 0 },
   },
 ];
-
-interface VideoItem {
-  id: string;
-  uri: string;
-  business: {
-    name: string;
-    handle: string;
-    avatar: string;
-    distance: string;
-  };
-  caption: string;
-  stats: {
-    likes: number;
-    comments: number;
-  };
-}
 
 function formatNumber(num: number): string {
   if (num >= 1000) {
@@ -122,12 +72,51 @@ function formatNumber(num: number): string {
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
+  const [videos, setVideos] = useState<FeedVideo[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isTabFocused, setIsTabFocused] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   // Calculate the actual viewable height (full screen minus tab bar)
   const videoHeight = SCREEN_HEIGHT - TAB_BAR_HEIGHT;
+
+  // Fetch videos from Supabase
+  const fetchVideos = useCallback(async (showRefreshIndicator = false) => {
+    try {
+      if (showRefreshIndicator) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+
+      const fetchedVideos = await getVideosForFeed(10, 0);
+      
+      if (fetchedVideos.length > 0) {
+        setVideos(fetchedVideos);
+      } else {
+        // Use fallback videos if database is empty
+        console.log('No videos in database, using fallback videos');
+        setVideos(FALLBACK_VIDEOS);
+      }
+    } catch (err) {
+      console.error('Error fetching videos:', err);
+      setError('Failed to load videos');
+      // Use fallback videos on error
+      setVideos(FALLBACK_VIDEOS);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchVideos();
+  }, [fetchVideos]);
 
   // Track when the Feed tab gains/loses focus
   useFocusEffect(
@@ -149,7 +138,11 @@ export default function FeedScreen() {
     itemVisiblePercentThreshold: 50,
   }).current;
 
-  const renderItem = useCallback(({ item, index }: { item: VideoItem; index: number }) => {
+  const handleRefresh = useCallback(() => {
+    fetchVideos(true);
+  }, [fetchVideos]);
+
+  const renderItem = useCallback(({ item, index }: { item: FeedVideo; index: number }) => {
     // Video is only active if it's the current index AND the tab is focused
     const isActive = index === activeIndex && isTabFocused;
 
@@ -229,11 +222,34 @@ export default function FeedScreen() {
     index,
   }), [videoHeight]);
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+        <Text style={styles.loadingText}>Loading videos...</Text>
+      </View>
+    );
+  }
+
+  // Error state with retry
+  if (error && videos.length === 0) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Pressable style={styles.retryButton} onPress={() => fetchVideos()}>
+          <RefreshCw size={20} color={colors.white} />
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={SAMPLE_VIDEOS}
+        data={videos}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         pagingEnabled
@@ -248,6 +264,8 @@ export default function FeedScreen() {
         maxToRenderPerBatch={2}
         windowSize={3}
         initialNumToRender={1}
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
       />
     </View>
   );
@@ -257,6 +275,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.black,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: colors.white,
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorText: {
+    color: colors.white,
+    fontSize: 16,
+    marginBottom: 16,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary[500],
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    gap: 8,
+  },
+  retryButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
   videoItem: {
     width: '100%',

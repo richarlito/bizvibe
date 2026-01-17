@@ -113,6 +113,7 @@ export interface Database {
         Row: {
           id: string;
           business_id: string;
+          video_url: string | null;
           mux_asset_id: string | null;
           mux_playback_id: string | null;
           thumbnail_url: string | null;
@@ -131,6 +132,7 @@ export interface Database {
         Insert: {
           id?: string;
           business_id: string;
+          video_url?: string | null;
           mux_asset_id?: string | null;
           mux_playback_id?: string | null;
           thumbnail_url?: string | null;
@@ -149,6 +151,7 @@ export interface Database {
         Update: {
           id?: string;
           business_id?: string;
+          video_url?: string | null;
           mux_asset_id?: string | null;
           mux_playback_id?: string | null;
           thumbnail_url?: string | null;
